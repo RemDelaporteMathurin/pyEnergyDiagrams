@@ -1,4 +1,4 @@
-# pyEnergyDiagram
+# pyEnergyDiagrams
 
 ## Installation
 

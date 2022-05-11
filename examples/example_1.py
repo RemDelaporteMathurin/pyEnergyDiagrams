@@ -1,4 +1,4 @@
-from pyenergydiagram import State, Diagram
+from pyenergydiagrams import State, Diagram
 import matplotx
 import matplotlib.pyplot as plt
 

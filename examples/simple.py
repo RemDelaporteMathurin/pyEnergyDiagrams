@@ -1,4 +1,4 @@
-from pyenergydiagram import State, Diagram
+from pyenergydiagrams import State, Diagram
 import matplotlib.pyplot as plt
 
 states = [State((-1) ** i) for i in range(20)]
