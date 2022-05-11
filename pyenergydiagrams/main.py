@@ -1,56 +1,81 @@
+import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib.legend import Legend
+from scipy.interpolate import interp1d
 
-def extract_lines():
-    parent_figure = plt.gcf()
-    parent_ax = plt.gca()
-    xlim = parent_ax.get_xlim()
-    ylim = parent_ax.get_ylim()
-    lines = parent_ax.get_lines()
-    for i, line in enumerate(lines):
-        line.remove()
 
-        plt.figure()
-        plt.gca().set_xlim(xlim)
-        plt.gca().set_ylim(ylim)
-        plt.gca().add_artist(line)
-        plt.gca().axis('off')
-        plt.savefig("line_{}.png".format(i), transparent=True)
-        plt.close()
-        line.remove()
-        parent_figure.add_artist(line)
+class State:
+    def __init__(self, E, copies=3) -> None:
+        self.E = E
+        self.copies = copies
 
-def extract_frame():
-    parent_figure = plt.gcf()
-    ax = plt.gca()
 
-    ax.remove()
-    fig = plt.figure()
-    ax.figure = fig
-    fig.axes.append(ax)
-    fig.add_axes(ax)
-    plt.savefig("axes.png", transparent=True)
-    plt.close()
-    ax.remove()
-    ax.figure = parent_figure
-    parent_figure.axes.append(ax)
-    parent_figure.add_axes(ax)
+class Diagram:
+    def __init__(self, states) -> None:
+        self.states = states
+        self.x_raw, self.energies = self.make_x_y_raw()
+        self.x, self.y = self.make_curve()
 
-def extract_legend():
-    parent_figure = plt.gcf()
-    legends = [c for c in plt.gca().get_children() if isinstance(c, Legend)]
-    for i, legend in enumerate(legends):
-        legend.remove()
-        
-        plt.figure()
-        plt.gca().add_artist(legend)
-        plt.gca().axis('off')
-        plt.savefig("legend_{}.png".format(i), transparent=True)
-        plt.close()
-        legend.remove()
-        parent_figure.add_artist(legend)
+    def make_x_y_raw(self):
+        x_raw, y_raw = [], []
+        eps = 0.05
+        for i, state in enumerate(self.states):
+            x_raw += [i + j * eps for j in range(state.copies)]
+            y_raw += [state.E] * state.copies
+        return x_raw, y_raw
 
-def extract_elements():
-    extract_lines()
-    extract_legend()
-    extract_frame()
+    def make_curve(self, nb_samples=500):
+        f = interp1d(self.x_raw, self.energies, kind="quadratic")
+
+        x_new = np.linspace(min(self.x_raw), max(self.x_raw), nb_samples)
+        y_smooth = f(x_new)
+        return x_new, y_smooth
+
+    def add_arrow(
+        self,
+        state1,
+        state2,
+        text="",
+        loc_text="middle-right",
+        kwargs_arrow={},
+        kwargs_text={},
+    ):
+        # arrow
+        plt.annotate(
+            text="",
+            xy=(self.states.index(state1), state1.E),
+            xytext=(self.states.index(state1), state2.E),
+            arrowprops=dict(arrowstyle="<->"),
+            **kwargs_arrow
+        )
+
+        if loc_text == "middle-right":
+            xytext = (self.states.index(state1) + 0.1, (state1.E + state2.E) / 2)
+            ha = "left"
+        elif loc_text == "middle-left":
+            xytext = (self.states.index(state1) - 0.1, (state1.E + state2.E) / 2)
+            ha = "right"
+        elif loc_text == "top":
+            xytext = (
+                self.states.index(state1),
+                (state1.E + state2.E) / 2 + abs(state1.E - state2.E) / 2 + 0.2,
+            )
+            ha = "center"
+        elif loc_text == "bottom":
+            xytext = (
+                self.states.index(state1),
+                (state1.E + state2.E) / 2 - abs(state1.E - state2.E) / 2 - 0.2,
+            )
+            ha = "center"
+
+        # text
+        plt.annotate(text=text, xy=xytext, ha=ha, va="center", **kwargs_text)
+
+    def add_dotted_line(self, state, dx_left=0, dx_right=0, **kwargs):
+        index = self.states.index(state)
+        plt.hlines(
+            y=state.E,
+            xmin=index - dx_left,
+            xmax=index + dx_right,
+            linestyles="dashed",
+            **kwargs
+        )
